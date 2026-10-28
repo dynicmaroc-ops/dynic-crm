@@ -441,7 +441,7 @@ fun ScanScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Extraction terminée (${(res.confidenceScore * 100).toInt()}% confiance)",
+                                text = if (res.isRealOcrExtraction) "Extrait depuis votre photo" else "Extraction terminée (${(res.confidenceScore * 100).toInt()}% confiance)",
                                 fontSize = 12.sp,
                                 color = Color(0xFF2E7D32),
                                 fontWeight = FontWeight.SemiBold
@@ -515,6 +515,60 @@ fun ScanScreen(
                                         selectedLabelColor = DynicTealPrimary
                                     )
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Raw OCR Text Viewer
+            if (res.rawTextSummary.isNotBlank()) {
+                item {
+                    var showRawText by remember { mutableStateOf(false) }
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showRawText = !showRawText },
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = DynicTealPrimary, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (res.isRealOcrExtraction) "Texte détecté sur votre photo" else "Texte de l'exemple",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+                                Text(
+                                    text = if (showRawText) "Masquer" else "Afficher le texte",
+                                    fontSize = 11.sp,
+                                    color = DynicTealPrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            if (showRawText) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0xFFF6F8F7),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = res.rawTextSummary,
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp,
+                                        color = Color(0xFF263238),
+                                        modifier = Modifier.padding(10.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -742,7 +796,17 @@ fun ScanScreen(
                         Button(
                             onClick = {
                                 coroutineScope.launch {
-                                    val pdfFile = scanManager.generateScanPdf(res, company)
+                                    val currentUpdated = res.copy(
+                                        detectedType = detectedType,
+                                        supplierNom = supplierNom,
+                                        supplierIce = supplierIce,
+                                        numero = docNumero,
+                                        categorie = categorie,
+                                        totalHT = totalHT.replace(",", ".").toDoubleOrNull() ?: res.totalHT,
+                                        totalTVA = totalTVA.replace(",", ".").toDoubleOrNull() ?: res.totalTVA,
+                                        totalTTC = totalTTC.replace(",", ".").toDoubleOrNull() ?: res.totalTTC
+                                    )
+                                    val pdfFile = scanManager.generateScanPdf(currentUpdated, company)
                                     PdfGenerator.sharePdf(context, pdfFile)
                                 }
                             },
@@ -760,7 +824,17 @@ fun ScanScreen(
                         // 3. Share text summary (WhatsApp / SMS / Mail)
                         OutlinedButton(
                             onClick = {
-                                val textSummary = scanManager.generateExportText(res)
+                                val currentUpdated = res.copy(
+                                    detectedType = detectedType,
+                                    supplierNom = supplierNom,
+                                    supplierIce = supplierIce,
+                                    numero = docNumero,
+                                    categorie = categorie,
+                                    totalHT = totalHT.replace(",", ".").toDoubleOrNull() ?: res.totalHT,
+                                    totalTVA = totalTVA.replace(",", ".").toDoubleOrNull() ?: res.totalTVA,
+                                    totalTTC = totalTTC.replace(",", ".").toDoubleOrNull() ?: res.totalTTC
+                                )
+                                val textSummary = scanManager.generateExportText(currentUpdated)
                                 val sendIntent = Intent().apply {
                                     action = Intent.ACTION_SEND
                                     putExtra(Intent.EXTRA_TEXT, textSummary)
@@ -779,7 +853,17 @@ fun ScanScreen(
                         // 4. Copy to clipboard
                         OutlinedButton(
                             onClick = {
-                                val textSummary = scanManager.generateExportText(res)
+                                val currentUpdated = res.copy(
+                                    detectedType = detectedType,
+                                    supplierNom = supplierNom,
+                                    supplierIce = supplierIce,
+                                    numero = docNumero,
+                                    categorie = categorie,
+                                    totalHT = totalHT.replace(",", ".").toDoubleOrNull() ?: res.totalHT,
+                                    totalTVA = totalTVA.replace(",", ".").toDoubleOrNull() ?: res.totalTVA,
+                                    totalTTC = totalTTC.replace(",", ".").toDoubleOrNull() ?: res.totalTTC
+                                )
+                                val textSummary = scanManager.generateExportText(currentUpdated)
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("Scan DYNIC", textSummary)
                                 clipboard.setPrimaryClip(clip)
